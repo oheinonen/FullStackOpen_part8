@@ -1,5 +1,6 @@
 const { ApolloServer } = require('@apollo/server')
 const { startStandaloneServer } = require('@apollo/server/standalone')
+const { v1: uuid } = require('uuid')
 
 let authors = [
   {
@@ -98,14 +99,13 @@ const typeDefs = `
     title: String!
     published: Int!
     author: String!
-    street: String!
     genres: [String!]!
     id: ID!
   }
 
   type Author {
     name: String!
-    born: Int!
+    born: Int
     bookCount: Int!
     id: ID!
   }
@@ -114,7 +114,20 @@ const typeDefs = `
     authorCount: Int!,
     bookCount: Int!
     allAuthors: [Author!]!
-    allBooks: [Book!]!
+    allBooks(author:String, genre: String): [Book!]!
+  }
+
+  type Mutation {
+    addBook(
+      title: String!
+      author: String!
+      published: Int!
+      genres: [String!]!
+    ): Book
+    editAuthor(
+      name: String!
+      setBornTo: Int!
+    ): Author
   }
 `
 
@@ -122,7 +135,19 @@ const resolvers = {
   Query: {
     authorCount: () => authors.length,
     bookCount: () => books.length,
-    allBooks: () => books,
+    allBooks: (root, args) => {
+      let filteredBooks = books;
+
+      if (args.author) {
+        filteredBooks = filteredBooks.filter((book) => book.author === args.author);
+      }
+
+      if (args.genre) {
+        filteredBooks = filteredBooks.filter((book) => book.genres.includes(args.genre));
+      }
+
+      return filteredBooks;
+    },
     allAuthors: () => authors.map((author) => {
       const bookCount = books.filter((book) => book.author === author.name).length;
       return {
@@ -130,7 +155,27 @@ const resolvers = {
         bookCount
       };
     })
+  },
+  Mutation: {
+    addBook: (root, args) => {
+      const book = { ...args, id: uuid() }
+      const author = authors.find((author) => author.name === args.author)
+      if(!author) {
+        authors = authors.concat({name: args.author, id: uuid()})
+      }
+      books = books.concat(book)
+      return book
+    },
+    editAuthor: (root, args) => {
+      const author = authors.find((author) => author.name === args.name)
+      if(!author){
+        return null
+      }
+      author.born = args.setBornTo
+      return author
+    }
   }
+
 }
 
 const server = new ApolloServer({
