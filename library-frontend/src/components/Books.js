@@ -1,9 +1,25 @@
 import { useQuery } from "@apollo/client"
 import { ALL_BOOKS } from "../queries"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 const Books = (props) => {
-  const { loading, error, data } = useQuery(ALL_BOOKS);
   const [selectedGenre, setSelectedGenre] = useState('all')
+  const [uniqueGenres, setUniqueGenres] = useState([])
+
+  // Used to get all available genres
+  const { data: allData } = useQuery(ALL_BOOKS);
+  useEffect(() => {
+    if (allData) {
+      setUniqueGenres([...new Set(allData.allBooks.flatMap(book => book.genres))]);
+    }
+  }, [allData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  let queryOptions = {};
+  if (selectedGenre !== 'all') {
+    queryOptions = {
+      variables: { genre: selectedGenre },
+    };
+  }
+  const { loading, error, data } = useQuery(ALL_BOOKS, queryOptions);
 
   if (!props.show) {
     return null
@@ -19,7 +35,6 @@ const Books = (props) => {
 
   const books = data.allBooks
 
-  const uniqueGenres = [...new Set(books.flatMap(book => book.genres))];
 
   return (
     <div>
@@ -36,7 +51,6 @@ const Books = (props) => {
               <th>published</th>
             </tr>
             {books
-              .filter((book) => book.genres.includes(selectedGenre) || selectedGenre === 'all')
               .map((a) => (
                 <tr key={a.title}>
                   <td>{a.title}</td>
