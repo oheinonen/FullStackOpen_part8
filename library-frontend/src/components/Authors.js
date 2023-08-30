@@ -3,14 +3,20 @@ import { useQuery, useMutation } from '@apollo/client'
 import { ALL_AUTHORS , ADD_BIRTHYEAR} from '../queries'
 import Select from 'react-select';
 
-const Authors = (props) => {
+const Authors = ({ show, setError }) => {
   const [born, setBorn] = useState('')
-  const [ addBirthyear ] = useMutation(ADD_BIRTHYEAR)
+  const [ addBirthyear ] = useMutation(ADD_BIRTHYEAR, {
+    onError: (error) => {
+      console.log(error)
+      const message = error.graphQLErrors[0].message
+      setError(message)
+    }
+  })
   const [selectedAuthor, setSelectedAuthor] = useState(null);
 
   const { loading, error, data } = useQuery(ALL_AUTHORS);
 
-  if (!props.show) {
+  if (!show) {
     return null
   }
 
